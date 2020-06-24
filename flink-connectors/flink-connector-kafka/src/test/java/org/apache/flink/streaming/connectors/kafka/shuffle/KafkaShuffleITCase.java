@@ -137,36 +137,6 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 	}
 
 	/**
-	 * To test value serialization and deserialization with time characteristic: ProcessingTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeProcessingTime() throws Exception {
-		testRecordSerDe(ProcessingTime);
-	}
-
-	/**
-	 * To test value and watermark serialization and deserialization with time characteristic: IngestionTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeIngestionTime() throws Exception {
-		testRecordSerDe(IngestionTime);
-	}
-
-	/**
-	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeEventTime() throws Exception {
-		testRecordSerDe(EventTime);
-	}
-
-	/**
 	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
 	 *
 	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
@@ -333,7 +303,7 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 		deleteTestTopic(topic);
 	}
 
-	private void testRecordSerDe(TimeCharacteristic timeCharacteristic) throws Exception {
+	public static void testRecordSerDe(TimeCharacteristic timeCharacteristic) throws Exception {
 		final int numElementsPerProducer = 2000;
 
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -416,7 +386,7 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 		}
 	}
 
-	private Map<Integer, Collection<ConsumerRecord<byte[], byte[]>>> testKafkaShuffleProducer(
+	private static Map<Integer, Collection<ConsumerRecord<byte[], byte[]>>> testKafkaShuffleProducer(
 			String topic,
 			StreamExecutionEnvironment env,
 			int numberOfPartitions,
@@ -466,7 +436,7 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 		return env;
 	}
 
-	private TypeSerializer<Tuple3<Integer, Long, Integer>> createTypeSerializer(StreamExecutionEnvironment env) {
+	private static TypeSerializer<Tuple3<Integer, Long, Integer>> createTypeSerializer(StreamExecutionEnvironment env) {
 		return new TupleTypeInfo<Tuple3<Integer, Long, Integer>>(
 				BasicTypeInfo.INT_TYPE_INFO,
 				BasicTypeInfo.LONG_TYPE_INFO,

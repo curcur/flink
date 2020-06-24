@@ -127,6 +127,7 @@ public class NetUtils {
 			try (ServerSocket serverSocket = new ServerSocket(0)) {
 				int port = serverSocket.getLocalPort();
 				if (port != 0) {
+					System.out.println("port number : " + port);
 					return port;
 				}
 			}

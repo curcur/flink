@@ -263,7 +263,7 @@ public class KafkaShuffleTestBase extends KafkaConsumerTestBase {
 		}
 	}
 
-	String topic(String prefix, TimeCharacteristic timeCharacteristic) {
+	static String topic(String prefix, TimeCharacteristic timeCharacteristic) {
 		return prefix + "_" + timeCharacteristic;
 	}
 }
