@@ -43,16 +43,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import static org.apache.flink.streaming.api.TimeCharacteristic.EventTime;
-import static org.apache.flink.streaming.api.TimeCharacteristic.IngestionTime;
-import static org.apache.flink.streaming.api.TimeCharacteristic.ProcessingTime;
 import static org.apache.flink.streaming.connectors.kafka.shuffle.FlinkKafkaShuffle.PARTITION_NUMBER;
 import static org.apache.flink.streaming.connectors.kafka.shuffle.FlinkKafkaShuffle.PRODUCER_PARALLELISM;
 import static org.apache.flink.test.util.TestUtils.tryExecute;
@@ -66,25 +61,25 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 	@Rule
 	public final Timeout timeout = Timeout.millis(600000L);
 
-	/**
-	 * To test no data is lost or duplicated end-2-end with the default time characteristic: ProcessingTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSimpleProcessingTime() throws Exception {
-		testKafkaShuffle(200000, ProcessingTime);
-	}
-
-	/**
-	 * To test no data is lost or duplicated end-2-end with time characteristic: IngestionTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSimpleIngestionTime() throws Exception {
-		testKafkaShuffle(200000, IngestionTime);
-	}
+//	/**
+//	 * To test no data is lost or duplicated end-2-end with the default time characteristic: ProcessingTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testSimpleProcessingTime() throws Exception {
+//		testKafkaShuffle(200000, ProcessingTime);
+//	}
+//
+//	/**
+//	 * To test no data is lost or duplicated end-2-end with time characteristic: IngestionTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testSimpleIngestionTime() throws Exception {
+//		testKafkaShuffle(200000, IngestionTime);
+//	}
 
 	/**
 	 * To test no data is lost or duplicated end-2-end with time characteristic: EventTime.
@@ -96,141 +91,141 @@ public class KafkaShuffleITCase extends KafkaShuffleTestBase {
 		testKafkaShuffle(100000, EventTime);
 	}
 
-	/**
-	 * To test data is partitioned to the right partition with time characteristic: ProcessingTime.
-	 *
-	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
-	 */
-	@Test
-	public void testAssignedToPartitionProcessingTime() throws Exception {
-		testAssignedToPartition(300000, ProcessingTime);
-	}
-
-	/**
-	 * To test data is partitioned to the right partition with time characteristic: IngestionTime.
-	 *
-	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
-	 */
-	@Test
-	public void testAssignedToPartitionIngestionTime() throws Exception {
-		testAssignedToPartition(300000, IngestionTime);
-	}
-
-	/**
-	 * To test data is partitioned to the right partition with time characteristic: EventTime.
-	 *
-	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
-	 */
-	@Test
-	public void testAssignedToPartitionEventTime() throws Exception {
-		testAssignedToPartition(100000, EventTime);
-	}
-
-	/**
-	 * To test watermark is monotonically incremental with randomized watermark.
-	 *
-	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
-	 */
-	@Test
-	public void testWatermarkIncremental() throws Exception {
-		testWatermarkIncremental(100000);
-	}
-
-	/**
-	 * To test value serialization and deserialization with time characteristic: ProcessingTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeProcessingTime() throws Exception {
-		testRecordSerDe(ProcessingTime);
-	}
-
-	/**
-	 * To test value and watermark serialization and deserialization with time characteristic: IngestionTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeIngestionTime() throws Exception {
-		testRecordSerDe(IngestionTime);
-	}
-
-	/**
-	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testSerDeEventTime() throws Exception {
-		testRecordSerDe(EventTime);
-	}
-
-	/**
-	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
-	 *
-	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
-	 */
-	@Test
-	public void testWatermarkBroadcasting() throws Exception {
-		final int numberOfPartitions = 3;
-		final int producerParallelism = 2;
-		final int numElementsPerProducer = 1000;
-
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		Map<Integer, Collection<ConsumerRecord<byte[], byte[]>>> results = testKafkaShuffleProducer(
-			topic("test_watermark_broadcast", EventTime),
-			env,
-			numberOfPartitions,
-			producerParallelism,
-			numElementsPerProducer,
-			EventTime);
-		TypeSerializer<Tuple3<Integer, Long, Integer>> typeSerializer = createTypeSerializer(env);
-		KafkaShuffleElementDeserializer deserializer = new KafkaShuffleElementDeserializer<>(typeSerializer);
-
-		// Records in a single partition are kept in order
-		for (int p = 0; p < numberOfPartitions; p++) {
-			Collection<ConsumerRecord<byte[], byte[]>> records = results.get(p);
-			Map<Integer, List<KafkaShuffleWatermark>> watermarks = new HashMap<>();
-
-			for (ConsumerRecord<byte[], byte[]> consumerRecord : records) {
-				Assert.assertNull(consumerRecord.key());
-				KafkaShuffleElement element = deserializer.deserialize(consumerRecord);
-				if (element.isRecord()) {
-					KafkaShuffleRecord<Tuple3<Integer, Long, Integer>> record = element.asRecord();
-					Assert.assertEquals(record.getValue().f1.longValue(), INIT_TIMESTAMP + record.getValue().f0);
-					Assert.assertEquals(record.getTimestamp().longValue(), record.getValue().f1.longValue());
-				} else if (element.isWatermark()) {
-					KafkaShuffleWatermark watermark = element.asWatermark();
-					watermarks.computeIfAbsent(watermark.getSubtask(), k -> new ArrayList<>());
-					watermarks.get(watermark.getSubtask()).add(watermark);
-				} else {
-					fail("KafkaShuffleElement is either record or watermark");
-				}
-			}
-
-			// According to the setting how watermarks are generated in this ITTest,
-			// every producer task emits a watermark corresponding to each record + the end-of-event-time watermark.
-			// Hence each producer sub task generates `numElementsPerProducer + 1` watermarks.
-			// Each producer sub task broadcasts these `numElementsPerProducer + 1` watermarks to all partitions.
-			// Thus in total, each producer sub task emits `(numElementsPerProducer + 1) * numberOfPartitions` watermarks.
-			// From the consumer side, each partition receives `(numElementsPerProducer + 1) * producerParallelism` watermarks,
-			// with each producer sub task produces `numElementsPerProducer + 1` watermarks.
-			// Besides, watermarks from the same producer sub task should keep in order.
-			for (List<KafkaShuffleWatermark> subTaskWatermarks : watermarks.values()) {
-				int index = 0;
-				Assert.assertEquals(numElementsPerProducer + 1, subTaskWatermarks.size());
-				for (KafkaShuffleWatermark watermark : subTaskWatermarks) {
-					if (index == numElementsPerProducer) {
-						// the last element is the watermark that signifies end-of-event-time
-						Assert.assertEquals(watermark.getWatermark(), Watermark.MAX_WATERMARK.getTimestamp());
-					} else {
-						Assert.assertEquals(watermark.getWatermark(), INIT_TIMESTAMP + index++);
-					}
-				}
-			}
-		}
-	}
+//	/**
+//	 * To test data is partitioned to the right partition with time characteristic: ProcessingTime.
+//	 *
+//	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
+//	 */
+//	@Test
+//	public void testAssignedToPartitionProcessingTime() throws Exception {
+//		testAssignedToPartition(300000, ProcessingTime);
+//	}
+//
+//	/**
+//	 * To test data is partitioned to the right partition with time characteristic: IngestionTime.
+//	 *
+//	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
+//	 */
+//	@Test
+//	public void testAssignedToPartitionIngestionTime() throws Exception {
+//		testAssignedToPartition(300000, IngestionTime);
+//	}
+//
+//	/**
+//	 * To test data is partitioned to the right partition with time characteristic: EventTime.
+//	 *
+//	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
+//	 */
+//	@Test
+//	public void testAssignedToPartitionEventTime() throws Exception {
+//		testAssignedToPartition(100000, EventTime);
+//	}
+//
+//	/**
+//	 * To test watermark is monotonically incremental with randomized watermark.
+//	 *
+//	 * <p>Producer Parallelism = 2; Kafka Partition # = 3; Consumer Parallelism = 3.
+//	 */
+//	@Test
+//	public void testWatermarkIncremental() throws Exception {
+//		testWatermarkIncremental(100000);
+//	}
+//
+//	/**
+//	 * To test value serialization and deserialization with time characteristic: ProcessingTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testSerDeProcessingTime() throws Exception {
+//		testRecordSerDe(ProcessingTime);
+//	}
+//
+//	/**
+//	 * To test value and watermark serialization and deserialization with time characteristic: IngestionTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testSerDeIngestionTime() throws Exception {
+//		testRecordSerDe(IngestionTime);
+//	}
+//
+//	/**
+//	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testSerDeEventTime() throws Exception {
+//		testRecordSerDe(EventTime);
+//	}
+//
+//	/**
+//	 * To test value and watermark serialization and deserialization with time characteristic: EventTime.
+//	 *
+//	 * <p>Producer Parallelism = 1; Kafka Partition # = 1; Consumer Parallelism = 1.
+//	 */
+//	@Test
+//	public void testWatermarkBroadcasting() throws Exception {
+//		final int numberOfPartitions = 3;
+//		final int producerParallelism = 2;
+//		final int numElementsPerProducer = 1000;
+//
+//		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//		Map<Integer, Collection<ConsumerRecord<byte[], byte[]>>> results = testKafkaShuffleProducer(
+//			topic("test_watermark_broadcast", EventTime),
+//			env,
+//			numberOfPartitions,
+//			producerParallelism,
+//			numElementsPerProducer,
+//			EventTime);
+//		TypeSerializer<Tuple3<Integer, Long, Integer>> typeSerializer = createTypeSerializer(env);
+//		KafkaShuffleElementDeserializer deserializer = new KafkaShuffleElementDeserializer<>(typeSerializer);
+//
+//		// Records in a single partition are kept in order
+//		for (int p = 0; p < numberOfPartitions; p++) {
+//			Collection<ConsumerRecord<byte[], byte[]>> records = results.get(p);
+//			Map<Integer, List<KafkaShuffleWatermark>> watermarks = new HashMap<>();
+//
+//			for (ConsumerRecord<byte[], byte[]> consumerRecord : records) {
+//				Assert.assertNull(consumerRecord.key());
+//				KafkaShuffleElement element = deserializer.deserialize(consumerRecord);
+//				if (element.isRecord()) {
+//					KafkaShuffleRecord<Tuple3<Integer, Long, Integer>> record = element.asRecord();
+//					Assert.assertEquals(record.getValue().f1.longValue(), INIT_TIMESTAMP + record.getValue().f0);
+//					Assert.assertEquals(record.getTimestamp().longValue(), record.getValue().f1.longValue());
+//				} else if (element.isWatermark()) {
+//					KafkaShuffleWatermark watermark = element.asWatermark();
+//					watermarks.computeIfAbsent(watermark.getSubtask(), k -> new ArrayList<>());
+//					watermarks.get(watermark.getSubtask()).add(watermark);
+//				} else {
+//					fail("KafkaShuffleElement is either record or watermark");
+//				}
+//			}
+//
+//			// According to the setting how watermarks are generated in this ITTest,
+//			// every producer task emits a watermark corresponding to each record + the end-of-event-time watermark.
+//			// Hence each producer sub task generates `numElementsPerProducer + 1` watermarks.
+//			// Each producer sub task broadcasts these `numElementsPerProducer + 1` watermarks to all partitions.
+//			// Thus in total, each producer sub task emits `(numElementsPerProducer + 1) * numberOfPartitions` watermarks.
+//			// From the consumer side, each partition receives `(numElementsPerProducer + 1) * producerParallelism` watermarks,
+//			// with each producer sub task produces `numElementsPerProducer + 1` watermarks.
+//			// Besides, watermarks from the same producer sub task should keep in order.
+//			for (List<KafkaShuffleWatermark> subTaskWatermarks : watermarks.values()) {
+//				int index = 0;
+//				Assert.assertEquals(numElementsPerProducer + 1, subTaskWatermarks.size());
+//				for (KafkaShuffleWatermark watermark : subTaskWatermarks) {
+//					if (index == numElementsPerProducer) {
+//						// the last element is the watermark that signifies end-of-event-time
+//						Assert.assertEquals(watermark.getWatermark(), Watermark.MAX_WATERMARK.getTimestamp());
+//					} else {
+//						Assert.assertEquals(watermark.getWatermark(), INIT_TIMESTAMP + index++);
+//					}
+//				}
+//			}
+//		}
+//	}
 
 	/**
 	 * To test no data is lost or duplicated end-2-end.
