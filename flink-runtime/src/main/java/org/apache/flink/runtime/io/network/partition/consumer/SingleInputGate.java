@@ -500,6 +500,30 @@ public class SingleInputGate extends IndexedInputGate {
 				if (--numberOfUninitializedChannels == 0) {
 					pendingEvents.clear();
 				}
+			} else if (current instanceof LocalInputChannel) {
+				// hacky way, in our test case, the channel is a local channel
+				boolean isLocal = shuffleDescriptor.isLocalTo(localLocation);
+				if (isLocal) {
+					InputChannel newChannel = new LocalInputChannel(
+						(LocalInputChannel) current,
+						shuffleDescriptor.getResultPartitionID());
+					LOG.debug("{}: Updated ...... local input channel to {}.", owningTaskName, newChannel);
+
+					inputChannels.put(partitionId, newChannel);
+					channels[current.getChannelIndex()] = newChannel;
+
+					if (requestedPartitionsFlag) {
+						newChannel.requestSubpartition(consumedSubpartitionIndex);
+					}
+
+					for (TaskEvent event : pendingEvents) {
+						newChannel.sendTaskEvent(event);
+					}
+
+					if (--numberOfUninitializedChannels == 0) {
+						pendingEvents.clear();
+					}
+				}
 			}
 		}
 	}

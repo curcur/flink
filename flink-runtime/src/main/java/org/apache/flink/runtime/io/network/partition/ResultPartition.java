@@ -202,6 +202,8 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 	@Override
 	public BufferBuilder tryGetBufferBuilder(int targetChannel) throws IOException {
 		BufferBuilder bufferBuilder = bufferPool.requestBufferBuilder(targetChannel);
+		LOG.info("try get a bew buffer builder:" + bufferPool.toString());
+		LOG.info("bufferQueue size:" + subpartitions[targetChannel].getBufferSize());
 		return bufferBuilder;
 	}
 
@@ -223,6 +225,18 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 		}
 
 		return subpartition.add(bufferConsumer, isPriorityEvent);
+	}
+
+	public void cleanBuffers(int subpartitionIndex) {
+		ResultSubpartition subpartition;
+		try {
+			checkInProduceState();
+			subpartition = subpartitions[subpartitionIndex];
+		} catch (Exception ex) {
+			throw ex;
+		}
+
+		subpartition.cleanPartialBufferFromWriter();
 	}
 
 	@Override

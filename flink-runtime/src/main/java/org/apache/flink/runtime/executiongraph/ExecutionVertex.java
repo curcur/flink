@@ -703,8 +703,12 @@ public class ExecutionVertex implements AccessExecutionVertex, Archiveable<Archi
 		}
 	}
 
+	public void deploy(boolean restart) throws JobException {
+		currentExecution.deploy(restart);
+	}
+
 	public void deploy() throws JobException {
-		currentExecution.deploy();
+		currentExecution.deploy(false);
 	}
 
 	@VisibleForTesting

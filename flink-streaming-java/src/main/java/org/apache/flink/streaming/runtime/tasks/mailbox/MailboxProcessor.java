@@ -178,7 +178,9 @@ public class MailboxProcessor implements Closeable {
 
 		final MailboxController defaultActionContext = new MailboxController(this);
 
+		int count = 0;
 		while (runMailboxStep(localMailbox, defaultActionContext)) {
+			count++;
 		}
 	}
 

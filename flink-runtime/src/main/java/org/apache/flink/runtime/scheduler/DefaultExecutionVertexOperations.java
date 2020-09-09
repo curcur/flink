@@ -32,6 +32,11 @@ class DefaultExecutionVertexOperations implements ExecutionVertexOperations {
 	}
 
 	@Override
+	public void deploy(final ExecutionVertex executionVertex, boolean restart) throws JobException {
+		executionVertex.deploy(restart);
+	}
+
+	@Override
 	public CompletableFuture<?> cancel(final ExecutionVertex executionVertex) {
 		return executionVertex.cancel();
 	}

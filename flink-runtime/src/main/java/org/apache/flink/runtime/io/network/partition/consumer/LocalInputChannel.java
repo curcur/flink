@@ -102,6 +102,13 @@ public class LocalInputChannel extends InputChannel implements BufferAvailabilit
 		this.taskEventPublisher = checkNotNull(taskEventPublisher);
 	}
 
+	public LocalInputChannel(
+		LocalInputChannel channel,
+		ResultPartitionID partitionId) {
+
+		this(channel.inputGate, channel.getChannelIndex(), partitionId, channel.partitionManager, channel.taskEventPublisher, 0, 0, channel.numBytesIn, channel.numBuffersIn);
+	}
+
 	// ------------------------------------------------------------------------
 	// Consume
 	// ------------------------------------------------------------------------

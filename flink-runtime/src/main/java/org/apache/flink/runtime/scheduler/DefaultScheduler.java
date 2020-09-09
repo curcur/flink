@@ -291,12 +291,16 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 		schedulingStrategy.onPartitionConsumable(partitionId);
 	}
 
+	@Override
+	public void allocateSlotsAndDeploy(final List<ExecutionVertexDeploymentOption> executionVertexDeploymentOptions) {
+		allocateSlotsAndDeploy(executionVertexDeploymentOptions, false);
+	}
+
 	// ------------------------------------------------------------------------
 	// SchedulerOperations
 	// ------------------------------------------------------------------------
 
-	@Override
-	public void allocateSlotsAndDeploy(final List<ExecutionVertexDeploymentOption> executionVertexDeploymentOptions) {
+	public void allocateSlotsAndDeploy(final List<ExecutionVertexDeploymentOption> executionVertexDeploymentOptions, boolean restart) {
 		validateDeploymentOptions(executionVertexDeploymentOptions);
 
 		final Map<ExecutionVertexID, ExecutionVertexDeploymentOption> deploymentOptionsByVertex =
@@ -319,7 +323,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 			deploymentOptionsByVertex,
 			slotExecutionVertexAssignments);
 
-		waitForAllSlotsAndDeploy(deploymentHandles);
+		waitForAllSlotsAndDeploy(deploymentHandles, restart);
 	}
 
 	private void validateDeploymentOptions(final Collection<ExecutionVertexDeploymentOption> deploymentOptions) {
@@ -364,9 +368,9 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 			.collect(Collectors.toList());
 	}
 
-	private void waitForAllSlotsAndDeploy(final List<DeploymentHandle> deploymentHandles) {
+	private void waitForAllSlotsAndDeploy(final List<DeploymentHandle> deploymentHandles, boolean restart) {
 		FutureUtils.assertNoException(
-			assignAllResources(deploymentHandles).handle(deployAll(deploymentHandles)));
+			assignAllResources(deploymentHandles).handle(deployAll(deploymentHandles, restart)));
 	}
 
 	private CompletableFuture<Void> assignAllResources(final List<DeploymentHandle> deploymentHandles) {
@@ -381,7 +385,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 		return FutureUtils.waitForAll(slotAssignedFutures);
 	}
 
-	private BiFunction<Void, Throwable, Void> deployAll(final List<DeploymentHandle> deploymentHandles) {
+	private BiFunction<Void, Throwable, Void> deployAll(final List<DeploymentHandle> deploymentHandles, boolean restart) {
 		return (ignored, throwable) -> {
 			propagateIfNonNull(throwable);
 			for (final DeploymentHandle deploymentHandle : deploymentHandles) {
@@ -390,7 +394,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 				checkState(slotAssigned.isDone());
 
 				FutureUtils.assertNoException(
-					slotAssigned.handle(deployOrHandleError(deploymentHandle)));
+					slotAssigned.handle(deployOrHandleError(deploymentHandle, restart)));
 			}
 			return null;
 		};
@@ -448,7 +452,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 		}
 	}
 
-	private BiFunction<Object, Throwable, Void> deployOrHandleError(final DeploymentHandle deploymentHandle) {
+	private BiFunction<Object, Throwable, Void> deployOrHandleError(final DeploymentHandle deploymentHandle, boolean restart) {
 		final ExecutionVertexVersion requiredVertexVersion = deploymentHandle.getRequiredVertexVersion();
 		final ExecutionVertexID executionVertexId = requiredVertexVersion.getExecutionVertexId();
 
@@ -460,7 +464,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 			}
 
 			if (throwable == null) {
-				deployTaskSafe(executionVertexId);
+				deployTaskSafe(executionVertexId, restart);
 			} else {
 				handleTaskDeploymentFailure(executionVertexId, throwable);
 			}
@@ -468,10 +472,10 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 		};
 	}
 
-	private void deployTaskSafe(final ExecutionVertexID executionVertexId) {
+	private void deployTaskSafe(final ExecutionVertexID executionVertexId, boolean restart) {
 		try {
 			final ExecutionVertex executionVertex = getExecutionVertex(executionVertexId);
-			executionVertexOperations.deploy(executionVertex);
+			executionVertexOperations.deploy(executionVertex, restart);
 		} catch (Throwable e) {
 			handleTaskDeploymentFailure(executionVertexId, e);
 		}

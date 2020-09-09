@@ -49,12 +49,12 @@ public class EagerSchedulingStrategy implements SchedulingStrategy {
 
 	@Override
 	public void startScheduling() {
-		allocateSlotsAndDeploy(SchedulingStrategyUtils.getAllVertexIdsFromTopology(schedulingTopology));
+		allocateSlotsAndDeploy(SchedulingStrategyUtils.getAllVertexIdsFromTopology(schedulingTopology), false);
 	}
 
 	@Override
 	public void restartTasks(Set<ExecutionVertexID> verticesToRestart) {
-		allocateSlotsAndDeploy(verticesToRestart);
+		allocateSlotsAndDeploy(verticesToRestart, true);
 	}
 
 	@Override
@@ -67,13 +67,13 @@ public class EagerSchedulingStrategy implements SchedulingStrategy {
 		// Will not react to these notifications.
 	}
 
-	private void allocateSlotsAndDeploy(final Set<ExecutionVertexID> verticesToDeploy) {
+	private void allocateSlotsAndDeploy(final Set<ExecutionVertexID> verticesToDeploy, boolean restart) {
 		final List<ExecutionVertexDeploymentOption> executionVertexDeploymentOptions =
 			SchedulingStrategyUtils.createExecutionVertexDeploymentOptionsInTopologicalOrder(
 				schedulingTopology,
 				verticesToDeploy,
 				id -> deploymentOption);
-		schedulerOperations.allocateSlotsAndDeploy(executionVertexDeploymentOptions);
+		schedulerOperations.allocateSlotsAndDeploy(executionVertexDeploymentOptions, restart);
 	}
 
 	/**

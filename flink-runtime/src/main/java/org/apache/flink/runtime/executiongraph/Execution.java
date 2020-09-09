@@ -681,12 +681,16 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 		return maxParallelism;
 	}
 
+	public void deploy() throws JobException {
+		deploy(false);
+	}
+
 	/**
 	 * Deploys the execution to the previously assigned resource.
 	 *
 	 * @throws JobException if the execution cannot be deployed to the assigned resource
 	 */
-	public void deploy() throws JobException {
+	public void deploy(boolean restart) throws JobException {
 		assertRunningInJobMasterMainThread();
 
 		final LogicalSlot slot  = assignedResource;
@@ -756,6 +760,12 @@ public class Execution implements AccessExecution, Archiveable<ArchivedExecution
 					(ack, failure) -> {
 						if (failure == null) {
 							vertex.notifyCompletedDeployment(this);
+
+							if (restart) {
+								IntermediateResultPartitionID partitionId = producedPartitions.keySet().iterator().next();
+								ExecutionAttemptID producerId = deployment.getExecutionAttemptId();
+								vertex.scheduleOrUpdateConsumers(new ResultPartitionID(partitionId, producerId));
+							}
 						} else {
 							if (failure instanceof TimeoutException) {
 								String taskname = vertex.getTaskNameWithSubtaskIndex() + " (" + attemptId + ')';

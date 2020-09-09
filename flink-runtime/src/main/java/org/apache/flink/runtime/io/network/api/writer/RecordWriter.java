@@ -133,27 +133,34 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 		serializer.reset();
 
 		boolean pruneTriggered = false;
-		BufferBuilder bufferBuilder = getBufferBuilder(targetChannel);
-		SerializationResult result = serializer.copyToBufferBuilder(bufferBuilder);
-		while (result.isFullBuffer()) {
-			finishBufferBuilder(bufferBuilder);
 
-			// If this was a full record, we are done. Not breaking out of the loop at this point
-			// will lead to another buffer request before breaking out (that would not be a
-			// problem per se, but it can lead to stalls in the pipeline).
-			if (result.isFullRecord()) {
-				pruneTriggered = true;
-				emptyCurrentBufferBuilder(targetChannel);
-				break;
+		try {
+			BufferBuilder bufferBuilder = getBufferBuilder(targetChannel);
+			SerializationResult result = serializer.copyToBufferBuilder(bufferBuilder);
+			while (result.isFullBuffer()) {
+				finishBufferBuilder(bufferBuilder);
+
+				// If this was a full record, we are done. Not breaking out of the loop at this point
+				// will lead to another buffer request before breaking out (that would not be a
+				// problem per se, but it can lead to stalls in the pipeline).
+				if (result.isFullRecord()) {
+					pruneTriggered = true;
+					emptyCurrentBufferBuilder(targetChannel);
+					break;
+				}
+
+				bufferBuilder = requestNewBufferBuilder(targetChannel);
+				result = serializer.copyToBufferBuilder(bufferBuilder);
 			}
+			checkState(!serializer.hasSerializedData(), "All data should be written at once");
 
-			bufferBuilder = requestNewBufferBuilder(targetChannel);
-			result = serializer.copyToBufferBuilder(bufferBuilder);
-		}
-		checkState(!serializer.hasSerializedData(), "All data should be written at once");
-
-		if (flushAlways) {
-			flushTargetPartition(targetChannel);
+			if (flushAlways) {
+				flushTargetPartition(targetChannel);
+			}
+		} catch (RuntimeException e) {
+			System.out.println("I am hereeree!!!!");
+			serializer.clear();
+			//e.printStackTrace();
 		}
 		return pruneTriggered;
 	}
@@ -289,6 +296,10 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 
 	protected void addBufferConsumer(BufferConsumer consumer, int targetChannel) throws IOException {
 		targetPartition.addBufferConsumer(consumer, targetChannel);
+	}
+
+	protected void cleanBuffers(int targetChannel) throws IOException {
+		targetPartition.cleanBuffers(targetChannel);
 	}
 
 	/**
