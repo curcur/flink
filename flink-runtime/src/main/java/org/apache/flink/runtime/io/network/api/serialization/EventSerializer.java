@@ -29,6 +29,7 @@ import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.io.network.api.EndOfSuperstepEvent;
+import org.apache.flink.runtime.io.network.api.RecordBarrier;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
@@ -62,6 +63,8 @@ public class EventSerializer {
 
 	private static final int END_OF_CHANNEL_STATE_EVENT = 5;
 
+	private static final int RECORD_BARRIER_EVENT = 6;
+
 	private static final int CHECKPOINT_TYPE_CHECKPOINT = 0;
 
 	private static final int CHECKPOINT_TYPE_SAVEPOINT = 1;
@@ -85,6 +88,9 @@ public class EventSerializer {
 		}
 		else if (eventClass == EndOfChannelStateEvent.class) {
 			return ByteBuffer.wrap(new byte[] { 0, 0, 0, END_OF_CHANNEL_STATE_EVENT });
+		}
+		else if (eventClass == RecordBarrier.class) {
+			return ByteBuffer.wrap(new byte[] { 0, 0, 0, RECORD_BARRIER_EVENT });
 		}
 		else if (eventClass == CancelCheckpointMarker.class) {
 			CancelCheckpointMarker marker = (CancelCheckpointMarker) event;
@@ -137,6 +143,8 @@ public class EventSerializer {
 				return type == END_OF_SUPERSTEP_EVENT;
 			} else if (eventClass.equals(EndOfChannelStateEvent.class)) {
 				return type == END_OF_CHANNEL_STATE_EVENT;
+			} else if (eventClass.equals(RecordBarrier.class)) {
+				return type == RECORD_BARRIER_EVENT;
 			} else if (eventClass.equals(CancelCheckpointMarker.class)) {
 				return type == CANCEL_CHECKPOINT_MARKER_EVENT;
 			} else {
@@ -172,6 +180,9 @@ public class EventSerializer {
 			}
 			else if (type == END_OF_CHANNEL_STATE_EVENT) {
 				return EndOfChannelStateEvent.INSTANCE;
+			}
+			else if (type == RECORD_BARRIER_EVENT) {
+				return RecordBarrier.INSTANCE;
 			}
 			else if (type == CANCEL_CHECKPOINT_MARKER_EVENT) {
 				long id = buffer.getLong();

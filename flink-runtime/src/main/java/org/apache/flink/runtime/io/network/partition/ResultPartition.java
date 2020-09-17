@@ -29,6 +29,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferPoolOwner;
 import org.apache.flink.runtime.io.network.partition.consumer.LocalInputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.RemoteInputChannel;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.function.FunctionWithException;
@@ -107,6 +108,8 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 	@Nullable
 	protected final BufferCompressor bufferCompressor;
 
+	private AbstractInvokable invokable;
+
 	public ResultPartition(
 		String owningTaskName,
 		int partitionIndex,
@@ -148,6 +151,11 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 
 		this.bufferPool = bufferPool;
 		partitionManager.registerResultPartition(this);
+	}
+
+	@Override
+	public void setupInvokable(AbstractInvokable invokable) {
+		this.invokable = invokable;
 	}
 
 	public String getOwningTaskName() {
@@ -202,6 +210,8 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 	@Override
 	public BufferBuilder tryGetBufferBuilder(int targetChannel) throws IOException {
 		BufferBuilder bufferBuilder = bufferPool.requestBufferBuilder(targetChannel);
+		LOG.debug("try to get a new buffer builder:" + bufferPool.toString());
+		LOG.debug("buffer consumer Queue size: " + subpartitions[targetChannel].getBufferSize());
 		return bufferBuilder;
 	}
 
@@ -369,6 +379,10 @@ public abstract class ResultPartition implements ResultPartitionWriter, BufferPo
 
 	public ResultSubpartition[] getAllPartitions() {
 		return subpartitions;
+	}
+
+	public void triggerRecordBarrier() {
+		invokable.triggerRecordBarrier();
 	}
 
 	// ------------------------------------------------------------------------

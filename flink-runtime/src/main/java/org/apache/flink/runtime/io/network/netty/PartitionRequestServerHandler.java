@@ -74,6 +74,7 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
 	protected void channelRead0(ChannelHandlerContext ctx, NettyMessage msg) throws Exception {
 		try {
 			Class<?> msgClazz = msg.getClass();
+			LOG.debug("Handling NettyMSG in PartitionRequestServerHandler %s", msg.toString());
 
 			// ----------------------------------------------------------------
 			// Intermediate result partition requests

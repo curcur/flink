@@ -314,12 +314,19 @@ public abstract class InputChannel {
 		private final Buffer buffer;
 		private final boolean moreAvailable;
 		private final int buffersInBacklog;
+		private final boolean shouldFlush;
 
-		public BufferAndAvailability(Buffer buffer, boolean moreAvailable, int buffersInBacklog) {
+		public BufferAndAvailability(Buffer buffer, boolean moreAvailable, int buffersInBacklog, boolean shouldFlush) {
 			this.buffer = checkNotNull(buffer);
 			this.moreAvailable = moreAvailable;
 			this.buffersInBacklog = buffersInBacklog;
+			this.shouldFlush = shouldFlush;
 		}
+
+		public BufferAndAvailability(Buffer buffer, boolean moreAvailable, int buffersInBacklog) {
+			this(buffer, moreAvailable, buffersInBacklog, true);
+		}
+
 
 		public Buffer buffer() {
 			return buffer;
@@ -331,6 +338,10 @@ public abstract class InputChannel {
 
 		public int buffersInBacklog() {
 			return buffersInBacklog;
+		}
+
+		public boolean isShouldFlush() {
+			return shouldFlush;
 		}
 	}
 }

@@ -707,6 +707,11 @@ public class Task implements Runnable, TaskSlotPayload, TaskActions, PartitionPr
 			// by the time we switched to running.
 			this.invokable = invokable;
 
+			// set up invokable in ResultPartitionWriter
+			for (ResultPartitionWriter writer : consumableNotifyingPartitionWriters) {
+				writer.setupInvokable(invokable);
+			}
+
 			// switch to the RUNNING state, if that fails, we have been canceled/failed in the meantime
 			if (!transitionState(ExecutionState.DEPLOYING, ExecutionState.RUNNING)) {
 				throw new CancelTaskException();

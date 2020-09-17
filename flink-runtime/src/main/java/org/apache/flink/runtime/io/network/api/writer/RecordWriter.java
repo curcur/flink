@@ -58,7 +58,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * ensures that all produced records are written to the output stream (incl.
  * partially filled ones).
  *
- * @param <T> the type of the record that can be emitted with this record writer
+ * @param <T> the type of the record that can be emitted with this record writeraa
  */
 public abstract class RecordWriter<T extends IOReadableWritable> implements AvailabilityProvider {
 
@@ -94,6 +94,9 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 	private int volatileFlusherExceptionCheckSkipCount;
 	private static final int VOLATILE_FLUSHER_EXCEPTION_MAX_CHECK_SKIP_COUNT = 100;
 
+	// used for debug only
+	private int serializedRecordCount = 0;
+
 	RecordWriter(ResultPartitionWriter writer, long timeout, String taskName) {
 		this.targetPartition = writer;
 		this.numberOfChannels = writer.getNumberOfSubpartitions();
@@ -118,6 +121,10 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 		checkErroneous();
 
 		serializer.serializeRecord(record);
+
+		// used for debug only
+		serializedRecordCount++;
+		// LOG.debug("RecordCount::::::" + serializedRecordCount);
 
 		// Make sure we don't hold onto the large intermediate serialization buffer for too long
 		copyFromSerializerToTargetChannel(targetChannel);

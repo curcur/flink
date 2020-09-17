@@ -252,6 +252,11 @@ public abstract class AbstractInvokable {
 			String.format("executeInTaskThread not supported by %s", getClass().getName()));
 	}
 
+	public void triggerRecordBarrier() {
+		throw new UnsupportedOperationException(
+			String.format("triggerRecordBarrier is not supported by %s", getClass().getName()));
+	}
+
 	/**
 	 * Aborts a checkpoint as the result of receiving possibly some checkpoint barriers,
 	 * but at least one {@link org.apache.flink.runtime.io.network.api.CancelCheckpointMarker}.

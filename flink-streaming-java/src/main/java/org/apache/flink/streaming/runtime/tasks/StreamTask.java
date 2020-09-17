@@ -35,6 +35,7 @@ import org.apache.flink.runtime.concurrent.FutureUtils;
 import org.apache.flink.runtime.execution.CancelTaskException;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
+import org.apache.flink.runtime.io.network.api.RecordBarrier;
 import org.apache.flink.runtime.io.network.api.writer.MultipleRecordWriters;
 import org.apache.flink.runtime.io.network.api.writer.NonRecordWriter;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
@@ -866,6 +867,16 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 				return false;
 			}
 		}
+	}
+
+	@Override
+	public void triggerRecordBarrier() {
+		mainMailboxExecutor.execute(
+			() -> {
+				LOG.debug("Triggering broadcasting RecordBarrier");
+				recordWriter.broadcastEvent(RecordBarrier.INSTANCE);
+			},
+			"broadcast record barrier");
 	}
 
 	@Override

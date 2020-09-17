@@ -167,14 +167,16 @@ class CreditBasedSequenceNumberingViewReader implements BufferAvailabilityListen
 	public BufferAndAvailability getNextBuffer() throws IOException {
 		BufferAndBacklog next = subpartitionView.getNextBuffer();
 		if (next != null) {
-			sequenceNumber++;
+			if (next.isShouldFlush()) {
+				sequenceNumber++;
 
-			if (next.buffer().isBuffer() && --numCreditsAvailable < 0) {
-				throw new IllegalStateException("no credit available");
+				if (next.buffer().isBuffer() && --numCreditsAvailable < 0) {
+					throw new IllegalStateException("no credit available");
+				}
 			}
 
 			return new BufferAndAvailability(
-				next.buffer(), isAvailable(next), next.buffersInBacklog());
+				next.buffer(), isAvailable(next), next.buffersInBacklog(), next.isShouldFlush());
 		} else {
 			return null;
 		}

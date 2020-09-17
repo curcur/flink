@@ -154,6 +154,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 			return;
 		}
 
+		LOG.debug("addCreditOrResumeConsumption: " + receiverId);
 		NetworkSequenceViewReader reader = allReaders.get(receiverId);
 		if (reader != null) {
 			operation.accept(reader);
@@ -169,6 +170,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 		// The user event triggered event loop callback is used for thread-safe
 		// hand over of reader queues and cancelled producers.
 
+		LOG.debug("userEventTriggered: " + msg.toString());
 		if (msg instanceof NetworkSequenceViewReader) {
 			enqueueAvailableReader((NetworkSequenceViewReader) msg);
 		} else if (msg.getClass() == InputChannelID.class) {
@@ -234,15 +236,18 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 						registerAvailableReader(reader);
 					}
 
-					BufferResponse msg = new BufferResponse(
-						next.buffer(),
-						reader.getSequenceNumber(),
-						reader.getReceiverId(),
-						next.buffersInBacklog());
+					if (next.isShouldFlush()) {
 
-					// Write and flush and wait until this is done before
-					// trying to continue with the next buffer.
-					channel.writeAndFlush(msg).addListener(writeListener);
+						BufferResponse msg = new BufferResponse(
+							next.buffer(),
+							reader.getSequenceNumber(),
+							reader.getReceiverId(),
+							next.buffersInBacklog());
+
+						// Write and flush and wait until this is done before
+						// trying to continue with the next buffer.
+						channel.writeAndFlush(msg).addListener(writeListener);
+					}
 
 					return;
 				}

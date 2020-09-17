@@ -24,6 +24,7 @@ import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.partition.BufferAvailabilityListener;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultSubpartitionView;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 
 import javax.annotation.Nullable;
 
@@ -43,6 +44,10 @@ public interface ResultPartitionWriter extends AutoCloseable, AvailabilityProvid
 	 * Setup partition, potentially heavy-weight, blocking operation comparing to just creation.
 	 */
 	void setup() throws IOException;
+
+	default void setupInvokable(AbstractInvokable invokable) {
+		throw new UnsupportedOperationException("setupInvokable");
+	}
 
 	ResultPartitionID getPartitionId();
 
@@ -90,6 +95,8 @@ public interface ResultPartitionWriter extends AutoCloseable, AvailabilityProvid
 	default boolean addBufferConsumer(BufferConsumer bufferConsumer, int subpartitionIndex) throws IOException {
 		return addBufferConsumer(bufferConsumer, subpartitionIndex, false);
 	}
+
+	default void cleanBuffers(int subpartitionIndex) {}
 
 	/**
 	 * Returns a reader for the subpartition with the given index.

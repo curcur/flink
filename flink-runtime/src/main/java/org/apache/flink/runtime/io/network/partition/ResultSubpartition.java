@@ -93,6 +93,13 @@ public abstract class ResultSubpartition {
 	 */
 	public abstract boolean add(BufferConsumer bufferConsumer, boolean isPriorityEvent) throws IOException;
 
+	public void cleanPartialBufferFromWriter() {}
+
+	// used for debug only
+	public int getBufferSize() {
+		return -1;
+	}
+
 	/**
 	 * Adds the given buffer.
 	 *
@@ -150,12 +157,18 @@ public abstract class ResultSubpartition {
 		private final boolean isDataAvailable;
 		private final int buffersInBacklog;
 		private final boolean isEventAvailable;
+		private final boolean shouldFlush;
 
-		public BufferAndBacklog(Buffer buffer, boolean isDataAvailable, int buffersInBacklog, boolean isEventAvailable) {
+		public BufferAndBacklog(Buffer buffer, boolean isDataAvailable, int buffersInBacklog, boolean isEventAvailable, boolean shouldFlush) {
 			this.buffer = checkNotNull(buffer);
 			this.buffersInBacklog = buffersInBacklog;
 			this.isDataAvailable = isDataAvailable;
 			this.isEventAvailable = isEventAvailable;
+			this.shouldFlush = shouldFlush;
+		}
+
+		public BufferAndBacklog(Buffer buffer, boolean isDataAvailable, int buffersInBacklog, boolean isEventAvailable) {
+			this(buffer, isDataAvailable, buffersInBacklog, isEventAvailable, true);
 		}
 
 		public Buffer buffer() {
@@ -172,6 +185,10 @@ public abstract class ResultSubpartition {
 
 		public boolean isEventAvailable() {
 			return isEventAvailable;
+		}
+
+		public boolean isShouldFlush() {
+			return shouldFlush;
 		}
 
 		public static BufferAndBacklog fromBufferAndLookahead(Buffer current, Buffer lookahead, int backlog) {

@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.runtime.checkpoint.channel.ChannelStateReader;
 import org.apache.flink.runtime.checkpoint.channel.ChannelStateReader.ReadResult;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
+import org.apache.flink.runtime.io.network.api.RecordBarrier;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
@@ -65,6 +66,9 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 
 	/** All buffers of this subpartition. Access to the buffers is synchronized on this object. */
 	private final ArrayDeque<BufferConsumer> buffers = new ArrayDeque<>();
+
+	/** Whether the buffer potentially contains partial records. */
+	private boolean isPartialBuffer = false;
 
 	/** The number of non-event buffers currently in this subpartition. */
 	@GuardedBy("buffers")
@@ -137,6 +141,13 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 	public void finish() throws IOException {
 		add(EventSerializer.toBufferConsumer(EndOfPartitionEvent.INSTANCE), true, false);
 		LOG.debug("{}: Finished {}.", parent.getOwningTaskName(), this);
+	}
+
+	@Override
+	public int getBufferSize() {
+		synchronized (buffers) {
+			return buffers.size();
+		}
 	}
 
 	private boolean add(BufferConsumer bufferConsumer, boolean finish, boolean insertAsHead) {
@@ -224,11 +235,13 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 	}
 
 	@Nullable
-	BufferAndBacklog pollBuffer() {
+	BufferAndBacklog pollBuffer() throws IOException {
 		synchronized (buffers) {
 			if (isBlockedByCheckpoint) {
 				return null;
 			}
+
+			LOG.debug("buffers still partial? " + isPartialBuffer);
 
 			Buffer buffer = null;
 
@@ -251,6 +264,7 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 
 				if (bufferConsumer.isFinished()) {
 					buffers.pop().close();
+					LOG.debug("Pop from buffers, current buffer size: " + buffers.size());
 					decreaseBuffersInBacklogUnsafe(bufferConsumer.isBuffer());
 				}
 
@@ -272,6 +286,15 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 				isBlockedByCheckpoint = true;
 			}
 
+			boolean shouldFlush = true;
+			if (isPartialBuffer) {
+			//	shouldFlush = false;
+				if (isRecordBarrier(buffer)) {
+					LOG.debug("Get a record barrier, set partialBuffer to false");
+					isPartialBuffer = false;
+				}
+			}
+
 			updateStatistics(buffer);
 			// Do not report last remaining buffer on buffers as available to read (assuming it's unfinished).
 			// It will be reported for reading either on flush or when the number of buffers in the queue
@@ -280,8 +303,14 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 				buffer,
 				isDataAvailableUnsafe(),
 				getBuffersInBacklog(),
-				isEventAvailableUnsafe());
+				isEventAvailableUnsafe(),
+				shouldFlush);
 		}
+	}
+
+	private boolean isRecordBarrier(Buffer buffer) throws IOException {
+		return !buffer.isBuffer()
+			&& EventSerializer.fromBuffer(buffer, getClass().getClassLoader()).getClass() == RecordBarrier.class;
 	}
 
 	void resumeConsumption() {
@@ -319,6 +348,14 @@ public class PipelinedSubpartition extends ResultSubpartition implements Checkpo
 		}
 
 		return readView;
+	}
+
+	public void releaseView() {
+		readView = null;
+		// clean-up buffer to prepare for partial data clean-up
+
+		isPartialBuffer = true;
+		parent.triggerRecordBarrier();
 	}
 
 	public boolean isAvailable(int numCreditsAvailable) {

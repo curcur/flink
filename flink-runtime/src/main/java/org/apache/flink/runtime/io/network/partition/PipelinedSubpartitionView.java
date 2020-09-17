@@ -49,7 +49,7 @@ public class PipelinedSubpartitionView implements ResultSubpartitionView {
 
 	@Nullable
 	@Override
-	public BufferAndBacklog getNextBuffer() {
+	public BufferAndBacklog getNextBuffer() throws IOException {
 		return parent.pollBuffer();
 	}
 
@@ -63,7 +63,7 @@ public class PipelinedSubpartitionView implements ResultSubpartitionView {
 		if (isReleased.compareAndSet(false, true)) {
 			// The view doesn't hold any resources and the parent cannot be restarted. Therefore,
 			// it's OK to notify about consumption as well.
-			parent.onConsumedSubpartition();
+			parent.releaseView();
 		}
 	}
 
