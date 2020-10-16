@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
@@ -69,23 +70,23 @@ public class PipelinedSubpartition extends ResultSubpartition
 	// ------------------------------------------------------------------------
 
 	/** All buffers of this subpartition. Access to the buffers is synchronized on this object. */
-	private final PrioritizedDeque<BufferConsumerWithPartialRecordLength> buffers = new PrioritizedDeque<>();
+	final PrioritizedDeque<BufferConsumerWithPartialRecordLength> buffers = new PrioritizedDeque<>();
 
 	/** The number of non-event buffers currently in this subpartition. */
 	@GuardedBy("buffers")
 	private int buffersInBacklog;
 
 	/** The read view to consume this subpartition. */
-	private PipelinedSubpartitionView readView;
+	PipelinedSubpartitionView readView;
 
 	/** Flag indicating whether the subpartition has been finished. */
-	private boolean isFinished;
+	boolean isFinished;
 
 	@GuardedBy("buffers")
 	private boolean flushRequested;
 
 	/** Flag indicating whether the subpartition has been released. */
-	private volatile boolean isReleased;
+	volatile boolean isReleased;
 
 	/** The total number of buffers (both data and event buffers). */
 	private long totalNumberOfBuffers;
@@ -98,9 +99,9 @@ public class PipelinedSubpartition extends ResultSubpartition
 
 	/** Whether this subpartition is blocked by exactly once checkpoint and is waiting for resumption. */
 	@GuardedBy("buffers")
-	private boolean isBlockedByCheckpoint = false;
+	boolean isBlockedByCheckpoint = false;
 
-	private int sequenceNumber = 0;
+	int sequenceNumber = 0;
 
 	// ------------------------------------------------------------------------
 
@@ -259,9 +260,10 @@ public class PipelinedSubpartition extends ResultSubpartition
 			}
 
 			while (!buffers.isEmpty()) {
-				BufferConsumer bufferConsumer = buffers.peek().getBufferConsumer();
+				BufferConsumerWithPartialRecordLength bufferConsumerWithPartialRecordLength = buffers.peek();
+				BufferConsumer bufferConsumer = requireNonNull(bufferConsumerWithPartialRecordLength).getBufferConsumer();
 
-				buffer = bufferConsumer.build();
+				buffer = buildSliceBuffer(bufferConsumerWithPartialRecordLength);
 
 				checkState(bufferConsumer.isFinished() || buffers.size() == 1,
 					"When there are multiple buffers, an unfinished bufferConsumer can not be at the head of the buffers queue.");
@@ -272,7 +274,7 @@ public class PipelinedSubpartition extends ResultSubpartition
 				}
 
 				if (bufferConsumer.isFinished()) {
-					buffers.poll().getBufferConsumer().close();
+					requireNonNull(buffers.poll()).getBufferConsumer().close();
 					decreaseBuffersInBacklogUnsafe(bufferConsumer.isBuffer());
 				}
 
@@ -513,6 +515,10 @@ public class PipelinedSubpartition extends ResultSubpartition
 	@Override
 	public void addBufferConsumer(BufferConsumer bufferConsumer) {
 		add(bufferConsumer, Integer.MIN_VALUE);
+	}
+
+	Buffer buildSliceBuffer(BufferConsumerWithPartialRecordLength buffer) {
+		return buffer.build();
 	}
 
 	@VisibleForTesting
