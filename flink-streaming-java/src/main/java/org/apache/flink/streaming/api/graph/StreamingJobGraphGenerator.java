@@ -732,7 +732,9 @@ public class StreamingJobGraphGenerator {
 					return ResultPartitionType.BLOCKING;
 				}
 			case ALL_EDGES_PIPELINED:
-				return ResultPartitionType.PIPELINED_BOUNDED;
+				// return ResultPartitionType.PIPELINED_BOUNDED;
+				 return ResultPartitionType.PIPELINED_APPROXIMATE;
+				// return ResultPartitionType.BLOCKING;
 			default:
 				throw new RuntimeException("Unrecognized global data exchange mode " + streamGraph.getGlobalDataExchangeMode());
 		}
