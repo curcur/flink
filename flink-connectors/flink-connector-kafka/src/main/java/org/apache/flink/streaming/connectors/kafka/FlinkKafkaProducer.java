@@ -212,7 +212,7 @@ public class FlinkKafkaProducer<IN>
 	/**
 	 * The name of the default topic this producer is writing data to.
 	 */
-	protected final String defaultTopicId;
+	private final String defaultTopicId;
 
 	/**
 	 * (Serializable) SerializationSchema for turning objects used with Flink into.
@@ -237,7 +237,7 @@ public class FlinkKafkaProducer<IN>
 	/**
 	 * Partitions of each topic.
 	 */
-	protected final Map<String, int[]> topicPartitionsMap;
+	private final Map<String, int[]> topicPartitionsMap;
 
 	/**
 	 * Max number of producers in the pool. If all producers are in use, snapshoting state will throw an exception.
@@ -252,7 +252,7 @@ public class FlinkKafkaProducer<IN>
 	/**
 	 * Flag controlling whether we are writing the Flink record's timestamp into Kafka.
 	 */
-	protected boolean writeTimestampToKafka = false;
+	private boolean writeTimestampToKafka = false;
 
 	/**
 	 * Flag indicating whether to accept failures (and log them), or to fail on failures.
@@ -272,10 +272,10 @@ public class FlinkKafkaProducer<IN>
 
 	/** Errors encountered in the async producer are stored here. */
 	@Nullable
-	protected transient volatile Exception asyncException;
+	private transient volatile Exception asyncException;
 
 	/** Number of unacknowledged records. */
-	protected final AtomicLong pendingRecords = new AtomicLong();
+	private final AtomicLong pendingRecords = new AtomicLong();
 
 	/** Cache of metrics to replace already registered metrics instead of overwriting existing ones. */
 	private final Map<String, KafkaMetricMutableWrapper> previouslyCreatedMetrics = new HashMap<>();
@@ -1276,7 +1276,7 @@ public class FlinkKafkaProducer<IN>
 		return producer;
 	}
 
-	protected void checkErroneous() throws FlinkKafkaException {
+	private void checkErroneous() throws FlinkKafkaException {
 		Exception e = asyncException;
 		if (e != null) {
 			// prevent double throwing
@@ -1318,7 +1318,7 @@ public class FlinkKafkaProducer<IN>
 		return props;
 	}
 
-	protected static int[] getPartitionsByTopic(String topic, Producer<byte[], byte[]> producer) {
+	private static int[] getPartitionsByTopic(String topic, Producer<byte[], byte[]> producer) {
 		// the fetched list is immutable, so we're creating a mutable copy in order to sort it
 		List<PartitionInfo> partitionsList = new ArrayList<>(producer.partitionsFor(topic));
 
@@ -1378,10 +1378,6 @@ public class FlinkKafkaProducer<IN>
 
 		boolean isTransactional() {
 			return transactionalId != null;
-		}
-
-		public FlinkKafkaInternalProducer<byte[], byte[]> getProducer() {
-			return producer;
 		}
 
 		@Override

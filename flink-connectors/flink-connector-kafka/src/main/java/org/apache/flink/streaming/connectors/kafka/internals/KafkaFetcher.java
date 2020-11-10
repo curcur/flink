@@ -63,13 +63,13 @@ public class KafkaFetcher<T> extends AbstractFetcher<T, TopicPartition> {
 	private final KafkaCollector kafkaCollector;
 
 	/** The handover of data and exceptions between the consumer thread and the task thread. */
-	final Handover handover;
+	private final Handover handover;
 
 	/** The thread that runs the actual KafkaConsumer and hand the record batches to this fetcher. */
-	final KafkaConsumerThread consumerThread;
+	private final KafkaConsumerThread consumerThread;
 
 	/** Flag to mark the main work loop as alive. */
-	volatile boolean running = true;
+	private volatile boolean running = true;
 
 	// ------------------------------------------------------------------------
 
