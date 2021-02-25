@@ -26,7 +26,6 @@ import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
-import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
@@ -278,7 +277,7 @@ public abstract class AbstractKeyedStateBackend<K>
         return (S) kvState;
     }
 
-    private void publishQueryableStateIfEnabled(
+    public void publishQueryableStateIfEnabled(
             StateDescriptor<?, ?> stateDescriptor, InternalKvState<?, ?, ?> kvState) {
         if (stateDescriptor.isQueryable()) {
             if (kvStateRegistry == null) {
@@ -339,17 +338,12 @@ public abstract class AbstractKeyedStateBackend<K>
         return keyGroupCompressionDecorator;
     }
 
-    /** Returns the total number of state entries across all keys/namespaces. */
-    @VisibleForTesting
-    public abstract int numKeyValueStateEntries();
-
     @VisibleForTesting
     public int numKeyValueStatesByName() {
         return keyValueStatesByName.size();
     }
 
-    // TODO remove this once heap-based timers are working with RocksDB incremental snapshots!
-    public boolean requiresLegacySynchronousTimerSnapshots(CheckpointType checkpointOptions) {
-        return false;
+    public boolean supportConcurrentModification() {
+        return true;
     }
 }

@@ -41,7 +41,7 @@ import java.util.Map;
  * @param <UK> The type of the keys in the state.
  * @param <UV> The type of the values in the state.
  */
-class HeapMapState<K, N, UK, UV> extends AbstractHeapState<K, N, Map<UK, UV>>
+public class HeapMapState<K, N, UK, UV> extends AbstractHeapState<K, N, Map<UK, UV>>
         implements InternalMapState<K, N, UK, UV> {
 
     /**

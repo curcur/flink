@@ -40,7 +40,7 @@ import java.util.List;
  * @param <N> The type of the namespace.
  * @param <V> The type of the value.
  */
-class HeapListState<K, N, V> extends AbstractHeapMergingState<K, N, V, List<V>, Iterable<V>>
+public class HeapListState<K, N, V> extends AbstractHeapMergingState<K, N, V, List<V>, Iterable<V>>
         implements InternalListState<K, N, V> {
     /**
      * Creates a new key/value state for the given hash map of key/value pairs.

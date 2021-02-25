@@ -1145,7 +1145,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>> extends Ab
         final StateBackend fromApplication =
                 configuration.getStateBackend(getUserCodeClassLoader());
 
-        return StateBackendLoader.fromApplicationOrConfigOrDefault(
+        return StateBackendLoader.loadStateBackend(
                 fromApplication,
                 getEnvironment().getTaskManagerInfo().getConfiguration(),
                 getUserCodeClassLoader(),

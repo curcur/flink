@@ -226,7 +226,7 @@ public class ExecutionGraphBuilder {
             final StateBackend rootBackend;
             try {
                 rootBackend =
-                        StateBackendLoader.fromApplicationOrConfigOrDefault(
+                        StateBackendLoader.loadStateBackend(
                                 applicationConfiguredBackend, jobManagerConfig, classLoader, log);
             } catch (IllegalConfigurationException | IOException | DynamicCodeLoadingException e) {
                 throw new JobExecutionException(

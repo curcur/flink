@@ -62,7 +62,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * @param <UK> The type of the keys in the map state.
  * @param <UV> The type of the values in the map state.
  */
-class RocksDBMapState<K, N, UK, UV> extends AbstractRocksDBState<K, N, Map<UK, UV>>
+public class RocksDBMapState<K, N, UK, UV> extends AbstractRocksDBState<K, N, Map<UK, UV>>
         implements InternalMapState<K, N, UK, UV> {
 
     private static final Logger LOG = LoggerFactory.getLogger(RocksDBMapState.class);

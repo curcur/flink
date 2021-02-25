@@ -39,7 +39,7 @@ import java.io.IOException;
  * @param <N> The type of the namespace.
  * @param <V> The type of value that the state state stores.
  */
-class RocksDBValueState<K, N, V> extends AbstractRocksDBState<K, N, V>
+public class RocksDBValueState<K, N, V> extends AbstractRocksDBState<K, N, V>
         implements InternalValueState<K, N, V> {
 
     /**

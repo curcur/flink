@@ -21,8 +21,8 @@ package org.apache.flink.table.runtime.util;
 import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
-import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.KeyedStateBackend;
+import org.apache.flink.runtime.state.delegate.DelegateKeyedStateBackend;
 
 /** Utility to create a {@link StateTtlConfig} object. */
 public class StateConfigUtil {
@@ -46,19 +46,24 @@ public class StateConfigUtil {
         }
     }
 
-    public static boolean isStateImmutableInStateBackend(KeyedStateBackend<?> stateBackend) {
+    public static boolean isStateImmutableInStateBackend(KeyedStateBackend<?> keyedStateBackend) {
         // TODO: remove the hard code check once FLINK-21027 is supported
         // state key and value is immutable only when using rocksdb state backend and timer
+        KeyedStateBackend<?> rootKeyedStateBackend =
+                keyedStateBackend instanceof DelegateKeyedStateBackend
+                        ? ((DelegateKeyedStateBackend<?>) keyedStateBackend)
+                                .getDelegatedKeyedStateBackend()
+                        : keyedStateBackend;
+
         boolean isRocksDbState =
-                ROCKSDB_KEYED_STATE_BACKEND.equals(stateBackend.getClass().getCanonicalName());
-        boolean isHeapTimer = false;
-        if (stateBackend instanceof AbstractKeyedStateBackend) {
-            // currently, requiresLegacySynchronousTimerSnapshots()
-            // indicates the underlying uses heap-bsased timer
-            isHeapTimer =
-                    ((AbstractKeyedStateBackend<?>) stateBackend)
-                            .requiresLegacySynchronousTimerSnapshots(CheckpointType.CHECKPOINT);
-        }
+                ROCKSDB_KEYED_STATE_BACKEND.equals(
+                        rootKeyedStateBackend.getClass().getCanonicalName());
+        // currently, requiresLegacySynchronousTimerSnapshots(CheckpointType)
+        // indicates the underlying uses heap-bsased timer
+        boolean isHeapTimer =
+                keyedStateBackend.requiresLegacySynchronousTimerSnapshots(
+                        CheckpointType.CHECKPOINT);
+
         return isRocksDbState && !isHeapTimer;
     }
 }
