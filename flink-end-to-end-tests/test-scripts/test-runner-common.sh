@@ -54,6 +54,9 @@ function run_test {
     # Always enable unaligned checkpoint
     set_config_key "execution.checkpointing.unaligned" "true"
 
+    # Always enable changelog state backend
+    set_config_key "state.backend.enable-statechangelog" "true"
+
     ${command}
     exit_code="$?"
     # remove trap for test execution
