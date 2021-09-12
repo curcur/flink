@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.configuration.ChangelogOptions;
 import org.apache.flink.configuration.ConfigurationUtils;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.DescribedEnum;
@@ -36,6 +37,7 @@ import org.apache.flink.util.Preconditions;
 import com.esotericsoftware.kryo.Serializer;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -127,12 +129,24 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
     private boolean forceAvro = false;
     private long autoWatermarkInterval = 200;
 
+    // ---------- statebackend related configurations ------------------------------
     /**
      * Interval in milliseconds for sending latency tracking marks from the sources to the sinks.
      */
     private long latencyTrackingInterval = MetricOptions.LATENCY_INTERVAL.defaultValue();
 
     private boolean isLatencyTrackingConfigured = false;
+
+    /** Interval in milliseconds to perform periodic changelog materialization. */
+    private long periodicMaterializeIntervalMillis =
+            ChangelogOptions.PERIODIC_MATERIALIZATION_INTERVAL.defaultValue().toMillis();
+
+    /** Max allowed number of consecutive failures for changelog materialization */
+    private int materializationMaxAllowedFailures =
+            ChangelogOptions.MATERIALIZATION_MAX_ALLOWED_FAILURES.defaultValue();
+
+    /** Flag to enable periodic materialization */
+    private boolean isPeriodicMaterializationEnabled = false;
 
     /**
      * @deprecated Should no longer be used because it is subsumed by RestartStrategyConfiguration
@@ -279,6 +293,36 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
     @Internal
     public boolean isLatencyTrackingConfigured() {
         return isLatencyTrackingConfigured;
+    }
+
+    @Internal
+    public long getPeriodicMaterializeIntervalMillis() {
+        return periodicMaterializeIntervalMillis;
+    }
+
+    @Internal
+    public void setPeriodicMaterializeIntervalMillis(Duration periodicMaterializeInterval) {
+        this.periodicMaterializeIntervalMillis = periodicMaterializeInterval.toMillis();
+    }
+
+    @Internal
+    public int getMaterializationMaxAllowedFailures() {
+        return materializationMaxAllowedFailures;
+    }
+
+    @Internal
+    public void setMaterializationMaxAllowedFailures(int materializationMaxAllowedFailures) {
+        this.materializationMaxAllowedFailures = materializationMaxAllowedFailures;
+    }
+
+    @Internal
+    public boolean isPeriodicMaterializationEnabled() {
+        return isPeriodicMaterializationEnabled;
+    }
+
+    @Internal
+    public void setPeriodicMaterialization(boolean isPeriodicMaterializationEnabled) {
+        this.isPeriodicMaterializationEnabled = isPeriodicMaterializationEnabled;
     }
 
     /**
@@ -1110,6 +1154,16 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         configuration
                 .getOptional(MetricOptions.LATENCY_INTERVAL)
                 .ifPresent(this::setLatencyTrackingInterval);
+
+        configuration
+                .getOptional(ChangelogOptions.PERIODIC_MATERIALIZATION_ENABLED)
+                .ifPresent(this::setPeriodicMaterialization);
+        configuration
+                .getOptional(ChangelogOptions.PERIODIC_MATERIALIZATION_INTERVAL)
+                .ifPresent(this::setPeriodicMaterializeIntervalMillis);
+        configuration
+                .getOptional(ChangelogOptions.MATERIALIZATION_MAX_ALLOWED_FAILURES)
+                .ifPresent(this::setMaterializationMaxAllowedFailures);
 
         configuration
                 .getOptional(PipelineOptions.MAX_PARALLELISM)

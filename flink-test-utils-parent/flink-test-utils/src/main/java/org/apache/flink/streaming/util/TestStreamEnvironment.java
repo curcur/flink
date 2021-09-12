@@ -18,7 +18,7 @@
 
 package org.apache.flink.streaming.util;
 
-import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.ChangelogOptions;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.streaming.api.environment.ExecutionCheckpointingOptions;
@@ -92,10 +92,10 @@ public class TestStreamEnvironment extends StreamExecutionEnvironment {
                                 Duration.ofSeconds(2));
                     }
                     if (STATE_CHANGE_LOG_CONFIG.equalsIgnoreCase(STATE_CHANGE_LOG_CONFIG_ON)) {
-                        conf.set(CheckpointingOptions.ENABLE_STATE_CHANGE_LOG, true);
+                        conf.set(ChangelogOptions.ENABLE_STATE_CHANGE_LOG, true);
                     } else if (STATE_CHANGE_LOG_CONFIG.equalsIgnoreCase(
                             STATE_CHANGE_LOG_CONFIG_RAND)) {
-                        randomize(conf, CheckpointingOptions.ENABLE_STATE_CHANGE_LOG, true, false);
+                        randomize(conf, ChangelogOptions.ENABLE_STATE_CHANGE_LOG, true, false);
                     }
                     env.configure(conf, env.getUserClassloader());
                     return env;

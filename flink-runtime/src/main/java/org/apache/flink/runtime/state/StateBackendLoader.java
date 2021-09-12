@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.configuration.ChangelogOptions;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
@@ -300,7 +301,7 @@ public class StateBackendLoader {
                 TernaryBoolean.TRUE.equals(isChangelogStateBackendEnableFromApplication)
                         || (TernaryBoolean.UNDEFINED.equals(
                                         isChangelogStateBackendEnableFromApplication)
-                                && config.get(CheckpointingOptions.ENABLE_STATE_CHANGE_LOG));
+                                && config.get(ChangelogOptions.ENABLE_STATE_CHANGE_LOG));
 
         StateBackend backend;
         if (enableChangeLog) {

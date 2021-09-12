@@ -21,7 +21,7 @@ package org.apache.flink.state.changelog;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.ChangelogOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.IllegalConfigurationException;
 import org.apache.flink.configuration.ReadableConfig;
@@ -244,8 +244,7 @@ public class ChangelogStateBackendLoadingTest {
 
     private Configuration config(String stateBackend, boolean enableChangelogStateBackend) {
         final Configuration config = new Configuration();
-        config.setBoolean(
-                CheckpointingOptions.ENABLE_STATE_CHANGE_LOG, enableChangelogStateBackend);
+        config.setBoolean(ChangelogOptions.ENABLE_STATE_CHANGE_LOG, enableChangelogStateBackend);
         config.setString(backendKey, stateBackend);
 
         return config;
@@ -253,8 +252,7 @@ public class ChangelogStateBackendLoadingTest {
 
     private Configuration config(boolean enableChangelogStateBackend) {
         final Configuration config = new Configuration();
-        config.setBoolean(
-                CheckpointingOptions.ENABLE_STATE_CHANGE_LOG, enableChangelogStateBackend);
+        config.setBoolean(ChangelogOptions.ENABLE_STATE_CHANGE_LOG, enableChangelogStateBackend);
 
         return config;
     }

@@ -40,6 +40,7 @@ import org.apache.flink.runtime.state.changelog.ChangelogStateBackendHandle.Chan
 import org.apache.flink.runtime.state.changelog.StateChangelogStorage;
 import org.apache.flink.runtime.state.delegate.DelegatingStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
+import org.apache.flink.runtime.taskmanager.AsynchronousException;
 import org.apache.flink.state.changelog.restore.ChangelogBackendRestoreOperation;
 import org.apache.flink.state.changelog.restore.ChangelogBackendRestoreOperation.BaseBackendBuilder;
 import org.apache.flink.util.Preconditions;
@@ -210,6 +211,7 @@ public class ChangelogStateBackend implements DelegatingStateBackend, Configurab
                         env.getTaskStateManager().getStateChangelogStorage(),
                         "Changelog storage is null when creating and restoring"
                                 + " the ChangelogKeyedStateBackend.");
+
         return ChangelogBackendRestoreOperation.restore(
                 changelogStorage.createReader(),
                 env.getUserCodeClassLoader().asClassLoader(),
@@ -218,12 +220,17 @@ public class ChangelogStateBackend implements DelegatingStateBackend, Configurab
                 (baseBackend, baseState) ->
                         new ChangelogKeyedStateBackend(
                                 baseBackend,
+                                env.getTaskInfo().getTaskNameWithSubtasks(),
                                 env.getExecutionConfig(),
                                 ttlTimeProvider,
                                 changelogStorage.createWriter(operatorIdentifier, keyGroupRange),
                                 baseState,
+                                (message, exception) ->
+                                        env.failExternally(
+                                                new AsynchronousException(message, exception)),
                                 env.getMainMailboxExecutor(),
-                                env.getAsyncOperationsThreadPool()));
+                                env.getAsyncOperationsThreadPool(),
+                                env.getCheckpointStorageAccess()));
     }
 
     private Collection<ChangelogStateBackendHandle> castHandles(

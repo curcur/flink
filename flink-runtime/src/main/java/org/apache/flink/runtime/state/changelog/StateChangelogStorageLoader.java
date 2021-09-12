@@ -18,7 +18,7 @@
 package org.apache.flink.runtime.state.changelog;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.ChangelogOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.plugin.PluginManager;
 
@@ -84,9 +84,7 @@ public class StateChangelogStorageLoader {
     @Nullable
     public static StateChangelogStorage<?> load(Configuration configuration) throws IOException {
         final String identifier =
-                configuration
-                        .getString(CheckpointingOptions.STATE_CHANGE_LOG_STORAGE)
-                        .toLowerCase();
+                configuration.getString(ChangelogOptions.STATE_CHANGE_LOG_STORAGE).toLowerCase();
 
         StateChangelogStorageFactory factory = STATE_CHANGELOG_STORAGE_FACTORIES.get(identifier);
         if (factory == null) {

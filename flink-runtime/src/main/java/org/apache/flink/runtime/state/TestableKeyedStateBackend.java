@@ -32,4 +32,13 @@ public interface TestableKeyedStateBackend<K> extends KeyedStateBackend<K> {
     default KeyedStateBackend<K> getDelegatedKeyedStateBackend(boolean recursive) {
         return this;
     }
+
+    default boolean canPerformMaterialization() {
+        return false;
+    }
+
+    default void triggerMaterialization() throws Exception {
+        throw new UnsupportedOperationException(
+                "This statebackend does not support materialization!");
+    }
 }

@@ -118,6 +118,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -157,7 +158,7 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
     @Rule public final ExpectedException expectedException = ExpectedException.none();
 
     @Before
-    public void before() throws IOException {
+    public void before() throws Exception {
         env = buildMockEnv();
     }
 
@@ -169,7 +170,7 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
     // lazily initialized stream storage
     private CheckpointStreamFactory checkpointStreamFactory;
 
-    private MockEnvironment env;
+    protected MockEnvironment env;
 
     protected abstract ConfigurableStateBackend getStateBackend() throws Exception;
 
@@ -183,6 +184,10 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
                 "The state backend under test does not implement CheckpointStorage."
                         + "Please override 'createCheckpointStorage' and provide an appropriate"
                         + "checkpoint storage instance");
+    }
+
+    protected CheckpointStorageAccess getCheckpointStorageAccess() throws Exception {
+        return getCheckpointStorage().createCheckpointStorage(new JobID());
     }
 
     protected abstract boolean isSerializerPresenceRequiredOnRestore();
@@ -211,6 +216,16 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
         return createKeyedBackend(keySerializer, 10, new KeyGroupRange(0, 9), env);
     }
 
+    protected <K> CheckpointableKeyedStateBackend<K> create(
+            TypeSerializer<K> keySerializer,
+            int numberOfKeyGroups,
+            KeyGroupRange keyGroupRange,
+            Environment env,
+            ScheduledExecutorService executorService)
+            throws Exception {
+        return null;
+    }
+
     protected <K> CheckpointableKeyedStateBackend<K> createKeyedBackend(
             TypeSerializer<K> keySerializer,
             int numberOfKeyGroups,
@@ -218,6 +233,7 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
             Environment env)
             throws Exception {
 
+        env.setCheckpointStorageAccess(getCheckpointStorageAccess());
         CheckpointableKeyedStateBackend<K> backend =
                 getStateBackend()
                         .createKeyedStateBackend(
@@ -5055,7 +5071,6 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
 
     @Test
     public void testCheckConcurrencyProblemWhenPerformingCheckpointAsync() throws Exception {
-
         CheckpointStreamFactory streamFactory = createStreamFactory();
         ExecutorService executorService = Executors.newScheduledThreadPool(1);
         CheckpointableKeyedStateBackend<Integer> backend =
@@ -5091,6 +5106,79 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
             IOUtils.closeQuietly(backend);
             backend.dispose();
             executorService.shutdown();
+        }
+    }
+
+    @Test
+    public void testMaterializedRestore() throws Exception {
+        CheckpointStreamFactory streamFactory = createStreamFactory();
+        SharedStateRegistry sharedStateRegistry = new SharedStateRegistry();
+
+        TypeInformation<TestPojo> pojoType = new GenericTypeInfo<>(TestPojo.class);
+        ValueStateDescriptor<TestPojo> kvId = new ValueStateDescriptor<>("id", pojoType);
+
+        CheckpointableKeyedStateBackend<Integer> backend =
+                createKeyedBackend(IntSerializer.INSTANCE, env);
+
+        if (!((TestableKeyedStateBackend) backend).canPerformMaterialization()) {
+            return;
+        }
+
+        try {
+            ValueState<TestPojo> state =
+                    backend.getPartitionedState(
+                            VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
+
+            backend.setCurrentKey(1);
+            state.update(new TestPojo("u1", 1));
+
+            backend.setCurrentKey(2);
+            state.update(new TestPojo("u2", 2));
+
+            ((TestableKeyedStateBackend) backend).triggerMaterialization();
+
+            backend.setCurrentKey(2);
+            state.update(new TestPojo("u2", 22));
+
+            backend.setCurrentKey(3);
+            state.update(new TestPojo("u3", 3));
+
+            ((TestableKeyedStateBackend) backend).triggerMaterialization();
+
+            KeyedStateHandle snapshot =
+                    runSnapshot(
+                            backend.snapshot(
+                                    682375462378L,
+                                    2,
+                                    streamFactory,
+                                    CheckpointOptions.forCheckpointWithDefaultLocation()),
+                            sharedStateRegistry);
+
+            IOUtils.closeQuietly(backend);
+            backend.dispose();
+
+            // ============================ restore snapshot ===============================
+
+            env.getExecutionConfig().registerKryoType(TestPojo.class);
+
+            backend = restoreKeyedBackend(IntSerializer.INSTANCE, snapshot, env);
+            snapshot.discardState();
+
+            state =
+                    backend.getPartitionedState(
+                            VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
+
+            backend.setCurrentKey(1);
+            assertEquals(state.value(), new TestPojo("u1", 1));
+
+            backend.setCurrentKey(2);
+            assertEquals(state.value(), new TestPojo("u2", 22));
+
+            backend.setCurrentKey(3);
+            assertEquals(state.value(), new TestPojo("u3", 3));
+        } finally {
+            IOUtils.closeQuietly(backend);
+            backend.dispose();
         }
     }
 
@@ -5535,8 +5623,11 @@ public abstract class StateBackendTestBase<B extends AbstractStateBackend> exten
         long value;
     }
 
-    private MockEnvironment buildMockEnv() throws IOException {
-        return MockEnvironment.builder().setTaskStateManager(getTestTaskStateManager()).build();
+    private MockEnvironment buildMockEnv() throws Exception {
+        MockEnvironment mockEnvironment =
+                MockEnvironment.builder().setTaskStateManager(getTestTaskStateManager()).build();
+        mockEnvironment.setCheckpointStorageAccess(getCheckpointStorageAccess());
+        return mockEnvironment;
     }
 
     protected TestTaskStateManager getTestTaskStateManager() throws IOException {
